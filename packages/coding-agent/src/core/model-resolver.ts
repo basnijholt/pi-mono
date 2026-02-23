@@ -14,6 +14,7 @@ import type { ModelRegistry } from "./model-registry.js";
 export const defaultModelPerProvider: Record<KnownProvider, string> = {
 	"amazon-bedrock": "us.anthropic.claude-opus-4-6-v1",
 	anthropic: "claude-opus-4-6",
+	"anthropic-vertex": "claude-sonnet-4-5@20250929",
 	openai: "gpt-5.1-codex",
 	"azure-openai-responses": "gpt-5.2",
 	"openai-codex": "gpt-5.3-codex",

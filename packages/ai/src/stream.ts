@@ -58,3 +58,4 @@ export async function completeSimple<TApi extends Api>(
 	const s = streamSimple(model, context, options);
 	return s.result();
 }
+

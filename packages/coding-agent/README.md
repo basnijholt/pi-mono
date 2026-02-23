@@ -456,7 +456,7 @@ pi config                   # Enable/disable package resources
 
 | Option | Description |
 |--------|-------------|
-| `--provider <name>` | Provider (anthropic, openai, google, etc.) |
+| `--provider <name>` | Provider (anthropic, anthropic-vertex, openai, google, etc.) |
 | `--model <pattern>` | Model pattern or ID (supports `provider/id` and optional `:<thinking>`) |
 | `--api-key <key>` | API key (overrides env vars) |
 | `--thinking <level>` | `off`, `minimal`, `low`, `medium`, `high`, `xhigh` |

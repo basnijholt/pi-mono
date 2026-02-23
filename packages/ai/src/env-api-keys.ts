@@ -72,6 +72,17 @@ export function getEnvApiKey(provider: any): string | undefined {
 		}
 	}
 
+	// Anthropic Vertex AI uses Google Application Default Credentials.
+	// Auth is configured via `gcloud auth application-default login`.
+	if (provider === "anthropic-vertex") {
+		const hasCredentials = hasVertexAdcCredentials();
+		const hasProject = !!(process.env.GOOGLE_CLOUD_PROJECT || process.env.GCLOUD_PROJECT);
+		// Region is optional (defaults to us-east5), but project is required
+		if (hasCredentials && hasProject) {
+			return "<authenticated>";
+		}
+	}
+
 	if (provider === "amazon-bedrock") {
 		// Amazon Bedrock supports multiple credential sources:
 		// 1. AWS_PROFILE - named profile from ~/.aws/credentials

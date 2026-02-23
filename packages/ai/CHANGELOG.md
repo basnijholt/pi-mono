@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Added
+
+- Added `anthropic-vertex` provider for Claude models on Google Vertex AI. Uses Google Application Default Credentials (ADC) for authentication, same as `google-vertex`. Supports all Claude models including claude-sonnet-4-5, claude-opus-4-5, and claude-haiku-4-5 with full thinking/reasoning support.
+
 ## [0.54.2] - 2026-02-23
 
 ## [0.54.1] - 2026-02-22
