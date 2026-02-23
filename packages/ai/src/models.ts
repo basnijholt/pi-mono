@@ -57,7 +57,7 @@ export function supportsXhigh<TApi extends Api>(model: Model<TApi>): boolean {
 		return true;
 	}
 
-	if (model.api === "anthropic-messages") {
+	if (model.api === "anthropic-messages" || model.api === "anthropic-vertex") {
 		return model.id.includes("opus-4-6") || model.id.includes("opus-4.6");
 	}
 

@@ -14,6 +14,18 @@ describe("supportsXhigh", () => {
 		expect(supportsXhigh(model!)).toBe(false);
 	});
 
+	it("returns true for Anthropic Vertex Opus 4.6 on anthropic-vertex API", () => {
+		const model = getModel("anthropic-vertex", "claude-opus-4-6@default");
+		expect(model).toBeDefined();
+		expect(supportsXhigh(model!)).toBe(true);
+	});
+
+	it("returns false for non-Opus Anthropic Vertex models", () => {
+		const model = getModel("anthropic-vertex", "claude-sonnet-4-5@20250929");
+		expect(model).toBeDefined();
+		expect(supportsXhigh(model!)).toBe(false);
+	});
+
 	it("returns false for OpenRouter Opus 4.6 (openai-completions API)", () => {
 		const model = getModel("openrouter", "anthropic/claude-opus-4.6");
 		expect(model).toBeDefined();

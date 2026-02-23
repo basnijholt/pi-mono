@@ -9,7 +9,6 @@ import { calculateCost } from "../models.js";
 import type {
 	Api,
 	AssistantMessage,
-	CacheRetention,
 	Context,
 	Message,
 	Model,
@@ -25,11 +24,20 @@ import type {
 import { AssistantMessageEventStream } from "../utils/event-stream.js";
 import { parseStreamingJson } from "../utils/json-parse.js";
 import { sanitizeSurrogates } from "../utils/sanitize-unicode.js";
-import { convertContentBlocks, mapStopReason, mergeHeaders, normalizeToolCallId } from "./anthropic-shared.js";
+import {
+	type AnthropicEffortLevel,
+	convertContentBlocks,
+	getCacheControl,
+	mapStopReason,
+	mapThinkingLevelToEffort,
+	mergeHeaders,
+	normalizeToolCallId,
+	supportsAdaptiveThinking,
+} from "./anthropic-shared.js";
 import { adjustMaxTokensForThinking, buildBaseOptions } from "./simple-options.js";
 import { transformMessages } from "./transform-messages.js";
 
-export type AnthropicVertexEffort = "low" | "medium" | "high" | "max";
+export type AnthropicVertexEffort = AnthropicEffortLevel;
 
 export interface AnthropicVertexOptions extends StreamOptions {
 	thinkingEnabled?: boolean;
@@ -237,52 +245,6 @@ export const streamAnthropicVertex: StreamFunction<"anthropic-vertex", Anthropic
 
 	return stream;
 };
-
-function resolveCacheRetention(cacheRetention?: CacheRetention): CacheRetention {
-	if (cacheRetention) {
-		return cacheRetention;
-	}
-	if (typeof process !== "undefined" && process.env.PI_CACHE_RETENTION === "long") {
-		return "long";
-	}
-	return "short";
-}
-
-function getCacheControl(
-	baseUrl: string,
-	cacheRetention?: CacheRetention,
-): { retention: CacheRetention; cacheControl?: { type: "ephemeral"; ttl?: "1h" } } {
-	const retention = resolveCacheRetention(cacheRetention);
-	if (retention === "none") {
-		return { retention };
-	}
-	const ttl = retention === "long" && baseUrl.includes("api.anthropic.com") ? "1h" : undefined;
-	return {
-		retention,
-		cacheControl: { type: "ephemeral", ...(ttl && { ttl }) },
-	};
-}
-
-function supportsAdaptiveThinking(modelId: string): boolean {
-	return modelId.includes("opus-4-6") || modelId.includes("opus-4.6");
-}
-
-function mapThinkingLevelToEffort(level: SimpleStreamOptions["reasoning"]): AnthropicVertexEffort {
-	switch (level) {
-		case "minimal":
-			return "low";
-		case "low":
-			return "low";
-		case "medium":
-			return "medium";
-		case "high":
-			return "high";
-		case "xhigh":
-			return "max";
-		default:
-			return "high";
-	}
-}
 
 function createClient(model: Model<"anthropic-vertex">, options?: AnthropicVertexOptions): AnthropicVertex {
 	const betaFeatures = ["fine-grained-tool-streaming-2025-05-14"];

@@ -2,7 +2,7 @@
  * Shared utilities for Anthropic API providers (direct API and Vertex AI).
  */
 
-import type { ImageContent, StopReason, TextContent } from "../types.js";
+import type { CacheRetention, ImageContent, SimpleStreamOptions, StopReason, TextContent } from "../types.js";
 import { sanitizeSurrogates } from "../utils/sanitize-unicode.js";
 
 /**
@@ -100,5 +100,68 @@ export function mapStopReason(reason: string): StopReason {
 			return "error";
 		default:
 			throw new Error(`Unhandled stop reason: ${reason}`);
+	}
+}
+
+export type AnthropicEffortLevel = "low" | "medium" | "high" | "max";
+
+/**
+ * Resolve cache retention preference.
+ * Defaults to "short" and uses PI_CACHE_RETENTION for backward compatibility.
+ */
+export function resolveCacheRetention(cacheRetention?: CacheRetention): CacheRetention {
+	if (cacheRetention) {
+		return cacheRetention;
+	}
+	if (typeof process !== "undefined" && process.env.PI_CACHE_RETENTION === "long") {
+		return "long";
+	}
+	return "short";
+}
+
+/**
+ * Get cache control settings for Anthropic API requests.
+ * The extended 1h TTL is only supported on api.anthropic.com (direct Anthropic API).
+ * Vertex AI does not support extended TTL, so it always uses ephemeral cache.
+ */
+export function getCacheControl(
+	baseUrl: string,
+	cacheRetention?: CacheRetention,
+): { retention: CacheRetention; cacheControl?: { type: "ephemeral"; ttl?: "1h" } } {
+	const retention = resolveCacheRetention(cacheRetention);
+	if (retention === "none") {
+		return { retention };
+	}
+	const ttl = retention === "long" && baseUrl.includes("api.anthropic.com") ? "1h" : undefined;
+	return {
+		retention,
+		cacheControl: { type: "ephemeral", ...(ttl && { ttl }) },
+	};
+}
+
+/**
+ * Check if a model supports adaptive thinking (Opus 4.6+).
+ */
+export function supportsAdaptiveThinking(modelId: string): boolean {
+	return modelId.includes("opus-4-6") || modelId.includes("opus-4.6");
+}
+
+/**
+ * Map SimpleStreamOptions reasoning level to Anthropic effort levels for adaptive thinking.
+ */
+export function mapThinkingLevelToEffort(level: SimpleStreamOptions["reasoning"]): AnthropicEffortLevel {
+	switch (level) {
+		case "minimal":
+			return "low";
+		case "low":
+			return "low";
+		case "medium":
+			return "medium";
+		case "high":
+			return "high";
+		case "xhigh":
+			return "max";
+		default:
+			return "high";
 	}
 }

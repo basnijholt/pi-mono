@@ -9,7 +9,6 @@ import { calculateCost } from "../models.js";
 import type {
 	Api,
 	AssistantMessage,
-	CacheRetention,
 	Context,
 	Message,
 	Model,
@@ -26,39 +25,19 @@ import { AssistantMessageEventStream } from "../utils/event-stream.js";
 import { parseStreamingJson } from "../utils/json-parse.js";
 import { sanitizeSurrogates } from "../utils/sanitize-unicode.js";
 
-import { convertContentBlocks, mapStopReason, mergeHeaders, normalizeToolCallId } from "./anthropic-shared.js";
+import {
+	type AnthropicEffortLevel,
+	convertContentBlocks,
+	getCacheControl,
+	mapStopReason,
+	mapThinkingLevelToEffort,
+	mergeHeaders,
+	normalizeToolCallId,
+	supportsAdaptiveThinking,
+} from "./anthropic-shared.js";
 import { buildCopilotDynamicHeaders, hasCopilotVisionInput } from "./github-copilot-headers.js";
 import { adjustMaxTokensForThinking, buildBaseOptions } from "./simple-options.js";
 import { transformMessages } from "./transform-messages.js";
-
-/**
- * Resolve cache retention preference.
- * Defaults to "short" and uses PI_CACHE_RETENTION for backward compatibility.
- */
-function resolveCacheRetention(cacheRetention?: CacheRetention): CacheRetention {
-	if (cacheRetention) {
-		return cacheRetention;
-	}
-	if (typeof process !== "undefined" && process.env.PI_CACHE_RETENTION === "long") {
-		return "long";
-	}
-	return "short";
-}
-
-function getCacheControl(
-	baseUrl: string,
-	cacheRetention?: CacheRetention,
-): { retention: CacheRetention; cacheControl?: { type: "ephemeral"; ttl?: "1h" } } {
-	const retention = resolveCacheRetention(cacheRetention);
-	if (retention === "none") {
-		return { retention };
-	}
-	const ttl = retention === "long" && baseUrl.includes("api.anthropic.com") ? "1h" : undefined;
-	return {
-		retention,
-		cacheControl: { type: "ephemeral", ...(ttl && { ttl }) },
-	};
-}
 
 // Stealth mode: Mimic Claude Code's tool naming exactly
 const claudeCodeVersion = "2.1.2";
@@ -99,7 +78,7 @@ const fromClaudeCodeName = (name: string, tools?: Tool[]) => {
 	return name;
 };
 
-export type AnthropicEffort = "low" | "medium" | "high" | "max";
+export type AnthropicEffort = AnthropicEffortLevel;
 
 export interface AnthropicOptions extends StreamOptions {
 	/**
@@ -346,34 +325,6 @@ export const streamAnthropic: StreamFunction<"anthropic-messages", AnthropicOpti
 
 	return stream;
 };
-
-/**
- * Check if a model supports adaptive thinking (Opus 4.6+)
- */
-function supportsAdaptiveThinking(modelId: string): boolean {
-	// Opus 4.6 model IDs (with or without date suffix)
-	return modelId.includes("opus-4-6") || modelId.includes("opus-4.6");
-}
-
-/**
- * Map ThinkingLevel to Anthropic effort levels for adaptive thinking
- */
-function mapThinkingLevelToEffort(level: SimpleStreamOptions["reasoning"]): AnthropicEffort {
-	switch (level) {
-		case "minimal":
-			return "low";
-		case "low":
-			return "low";
-		case "medium":
-			return "medium";
-		case "high":
-			return "high";
-		case "xhigh":
-			return "max";
-		default:
-			return "high";
-	}
-}
 
 export const streamSimpleAnthropic: StreamFunction<"anthropic-messages", SimpleStreamOptions> = (
 	model: Model<"anthropic-messages">,
