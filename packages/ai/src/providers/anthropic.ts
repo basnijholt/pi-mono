@@ -14,7 +14,6 @@ import type {
 	Message,
 	Model,
 	SimpleStreamOptions,
-	StopReason,
 	StreamFunction,
 	StreamOptions,
 	TextContent,
@@ -101,7 +100,6 @@ const fromClaudeCodeName = (name: string, tools?: Tool[]) => {
 };
 
 export type AnthropicEffort = "low" | "medium" | "high" | "max";
-
 
 export interface AnthropicOptions extends StreamOptions {
 	/**
@@ -556,9 +554,9 @@ function buildParams(
 	if (options?.thinkingEnabled && model.reasoning) {
 		if (supportsAdaptiveThinking(model.id)) {
 			// Adaptive thinking: Claude decides when and how much to think
-			params.thinking = { type: "adaptive" } as any;
+			params.thinking = { type: "adaptive" };
 			if (options.effort) {
-				(params as any).output_config = { effort: options.effort };
+				params.output_config = { effort: options.effort };
 			}
 		} else {
 			// Budget-based thinking for older models
@@ -761,4 +759,3 @@ function convertTools(tools: Tool[], isOAuthToken: boolean): Anthropic.Messages.
 		};
 	});
 }
-

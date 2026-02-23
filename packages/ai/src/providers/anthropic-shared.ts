@@ -99,8 +99,6 @@ export function mapStopReason(reason: string): StopReason {
 		case "sensitive": // Content flagged by safety filters
 			return "error";
 		default:
-			// Log unexpected stop reasons for debugging but don't crash
-			console.warn(`Unknown Anthropic stop reason: ${reason}`);
-			return "stop";
+			throw new Error(`Unhandled stop reason: ${reason}`);
 	}
 }

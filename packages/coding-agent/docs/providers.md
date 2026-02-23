@@ -54,6 +54,7 @@ pi
 | Provider | Environment Variable | `auth.json` key |
 |----------|----------------------|------------------|
 | Anthropic | `ANTHROPIC_API_KEY` | `anthropic` |
+| Anthropic Vertex | ADC (`GOOGLE_CLOUD_PROJECT` / `GCLOUD_PROJECT`) | `anthropic-vertex` |
 | Azure OpenAI Responses | `AZURE_OPENAI_API_KEY` | `azure-openai-responses` |
 | OpenAI | `OPENAI_API_KEY` | `openai` |
 | Google Gemini | `GEMINI_API_KEY` | `google` |
@@ -169,6 +170,18 @@ export GOOGLE_CLOUD_LOCATION=us-central1
 ```
 
 Or set `GOOGLE_APPLICATION_CREDENTIALS` to a service account key file.
+
+### Anthropic Vertex AI
+
+Anthropic Vertex runs Claude models through Google Vertex AI and also uses ADC:
+
+```bash
+gcloud auth application-default login
+export GOOGLE_CLOUD_PROJECT=your-project   # or GCLOUD_PROJECT
+export GOOGLE_CLOUD_LOCATION=us-east5      # optional, defaults to us-east5
+```
+
+You can also set `GOOGLE_APPLICATION_CREDENTIALS` for service-account auth in CI/production.
 
 ## Custom Providers
 

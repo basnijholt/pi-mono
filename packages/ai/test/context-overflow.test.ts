@@ -123,6 +123,25 @@ describe("Context overflow error handling", () => {
 		}, 120000);
 	});
 
+	describe("Anthropic Vertex", () => {
+		const project = process.env.GOOGLE_CLOUD_PROJECT || process.env.GCLOUD_PROJECT;
+		const isAnthropicVertexConfigured = Boolean(project);
+
+		it.skipIf(!isAnthropicVertexConfigured)(
+			"claude-sonnet-4-5@20250929 - should detect overflow via isContextOverflow",
+			async () => {
+				const model = getModel("anthropic-vertex", "claude-sonnet-4-5@20250929");
+				const result = await testContextOverflow(model, "<authenticated>");
+				logResult(result);
+
+				expect(result.stopReason).toBe("error");
+				expect(result.errorMessage).toMatch(/prompt is too long/i);
+				expect(isContextOverflow(result.response, model.contextWindow)).toBe(true);
+			},
+			120000,
+		);
+	});
+
 	// =============================================================================
 	// GitHub Copilot (OAuth)
 	// Tests both OpenAI and Anthropic models via Copilot

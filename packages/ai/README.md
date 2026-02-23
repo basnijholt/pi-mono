@@ -37,6 +37,7 @@ Unified LLM API with automatic model discovery, provider configuration, token an
   - [Checking Environment Variables](#checking-environment-variables)
 - [OAuth Providers](#oauth-providers)
   - [Vertex AI (ADC)](#vertex-ai-adc)
+  - [Anthropic Vertex AI (Claude on Vertex)](#anthropic-vertex-ai-claude-on-vertex)
   - [CLI Login](#cli-login)
   - [Programmatic OAuth](#programmatic-oauth)
   - [Login Flow Example](#login-flow-example)
@@ -622,6 +623,7 @@ The callback is supported by `stream`, `complete`, `streamSimple`, and `complete
 The library uses a registry of API implementations. Built-in APIs include:
 
 - **`anthropic-messages`**: Anthropic Messages API (`streamAnthropic`, `AnthropicOptions`)
+- **`anthropic-vertex`**: Anthropic Vertex AI API (`streamAnthropicVertex`, `AnthropicVertexOptions`)
 - **`google-generative-ai`**: Google Generative AI API (`streamGoogle`, `GoogleOptions`)
 - **`google-gemini-cli`**: Google Cloud Code Assist API (`streamGoogleGeminiCli`, `GoogleGeminiCliOptions`)
 - **`google-vertex`**: Google Vertex AI API (`streamGoogleVertex`, `GoogleVertexOptions`)
@@ -898,6 +900,7 @@ In Node.js environments, you can set environment variables to avoid passing API 
 | Anthropic | `ANTHROPIC_API_KEY` or `ANTHROPIC_OAUTH_TOKEN` |
 | Google | `GEMINI_API_KEY` |
 | Vertex AI | `GOOGLE_CLOUD_PROJECT` (or `GCLOUD_PROJECT`) + `GOOGLE_CLOUD_LOCATION` + ADC |
+| Anthropic Vertex | `GOOGLE_CLOUD_PROJECT` (or `GCLOUD_PROJECT`) + ADC (optional `GOOGLE_CLOUD_LOCATION`, defaults to `us-east5`) |
 | Mistral | `MISTRAL_API_KEY` |
 | Groq | `GROQ_API_KEY` |
 | Cerebras | `CEREBRAS_API_KEY` |
@@ -1041,6 +1044,7 @@ import { getModel, complete } from '@mariozechner/pi-ai';
 **Available models:**
 - `claude-sonnet-4-5@20250929` - Claude Sonnet 4.5 with thinking support
 - `claude-opus-4-5@20251101` - Claude Opus 4.5 with thinking support
+- `claude-opus-4-6@default` - Claude Opus 4.6 with adaptive thinking support (`effort` levels)
 - `claude-haiku-4-5@20251001` - Claude Haiku 4.5
 - `claude-sonnet-4-20250514` - Claude Sonnet 4 with thinking support
 - `claude-3-5-sonnet-v2@20241022` - Claude 3.5 Sonnet v2

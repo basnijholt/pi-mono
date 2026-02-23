@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+### Added
+
+- Added Anthropic Vertex provider setup documentation, including ADC requirements (`GOOGLE_CLOUD_PROJECT`/`GCLOUD_PROJECT`, optional `GOOGLE_CLOUD_LOCATION`, and `GOOGLE_APPLICATION_CREDENTIALS`).
+
+### Changed
+
+- Added default model resolution for `anthropic-vertex` (`claude-sonnet-4-5@20250929`).
+
 ## [0.54.2] - 2026-02-23
 
 ### Fixed

@@ -150,6 +150,29 @@ describe("totalTokens field", () => {
 		);
 	});
 
+	describe("Anthropic Vertex", () => {
+		const project = process.env.GOOGLE_CLOUD_PROJECT || process.env.GCLOUD_PROJECT;
+		const region = process.env.GOOGLE_CLOUD_LOCATION || "us-east5";
+		const isAnthropicVertexConfigured = Boolean(project);
+
+		it.skipIf(!isAnthropicVertexConfigured)(
+			"claude-sonnet-4-5@20250929 - should return totalTokens equal to sum of components",
+			{ retry: 3, timeout: 60000 },
+			async () => {
+				const llm = getModel("anthropic-vertex", "claude-sonnet-4-5@20250929");
+
+				console.log(`\nAnthropic Vertex / ${llm.id}:`);
+				const { first, second } = await testTotalTokensWithCache(llm, { project, region });
+
+				logUsage("First request", first);
+				logUsage("Second request", second);
+
+				assertTotalTokensEqualsComponents(first);
+				assertTotalTokensEqualsComponents(second);
+			},
+		);
+	});
+
 	// =========================================================================
 	// OpenAI
 	// =========================================================================

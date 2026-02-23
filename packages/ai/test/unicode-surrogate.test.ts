@@ -367,6 +367,38 @@ describe("AI Providers Unicode Surrogate Pair Tests", () => {
 		});
 	});
 
+	describe("Anthropic Vertex Provider Unicode Handling", () => {
+		const project = process.env.GOOGLE_CLOUD_PROJECT || process.env.GCLOUD_PROJECT;
+		const region = process.env.GOOGLE_CLOUD_LOCATION || "us-east5";
+		const isAnthropicVertexConfigured = Boolean(project);
+		const llm = getModel("anthropic-vertex", "claude-sonnet-4-5@20250929");
+		const anthropicVertexOptions = { project, region } as const;
+
+		it.skipIf(!isAnthropicVertexConfigured)(
+			"should handle emoji in tool results",
+			{ retry: 3, timeout: 30000 },
+			async () => {
+				await testEmojiInToolResults(llm, anthropicVertexOptions);
+			},
+		);
+
+		it.skipIf(!isAnthropicVertexConfigured)(
+			"should handle real-world LinkedIn comment data with emoji",
+			{ retry: 3, timeout: 30000 },
+			async () => {
+				await testRealWorldLinkedInData(llm, anthropicVertexOptions);
+			},
+		);
+
+		it.skipIf(!isAnthropicVertexConfigured)(
+			"should handle unpaired high surrogate (0xD83D) in tool results",
+			{ retry: 3, timeout: 30000 },
+			async () => {
+				await testUnpairedHighSurrogate(llm, anthropicVertexOptions);
+			},
+		);
+	});
+
 	// =========================================================================
 	// OAuth-based providers (credentials from ~/.pi/agent/oauth.json)
 	// =========================================================================

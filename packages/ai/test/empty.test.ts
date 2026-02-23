@@ -248,6 +248,46 @@ describe("AI Providers Empty Message Tests", () => {
 		});
 	});
 
+	describe("Anthropic Vertex Provider Empty Messages", () => {
+		const project = process.env.GOOGLE_CLOUD_PROJECT || process.env.GCLOUD_PROJECT;
+		const region = process.env.GOOGLE_CLOUD_LOCATION || "us-east5";
+		const isAnthropicVertexConfigured = Boolean(project);
+		const llm = getModel("anthropic-vertex", "claude-sonnet-4-5@20250929");
+		const anthropicVertexOptions = { project, region } as const;
+
+		it.skipIf(!isAnthropicVertexConfigured)(
+			"should handle empty content array",
+			{ retry: 3, timeout: 30000 },
+			async () => {
+				await testEmptyMessage(llm, anthropicVertexOptions);
+			},
+		);
+
+		it.skipIf(!isAnthropicVertexConfigured)(
+			"should handle empty string content",
+			{ retry: 3, timeout: 30000 },
+			async () => {
+				await testEmptyStringMessage(llm, anthropicVertexOptions);
+			},
+		);
+
+		it.skipIf(!isAnthropicVertexConfigured)(
+			"should handle whitespace-only content",
+			{ retry: 3, timeout: 30000 },
+			async () => {
+				await testWhitespaceOnlyMessage(llm, anthropicVertexOptions);
+			},
+		);
+
+		it.skipIf(!isAnthropicVertexConfigured)(
+			"should handle empty assistant message in conversation",
+			{ retry: 3, timeout: 30000 },
+			async () => {
+				await testEmptyAssistantMessage(llm, anthropicVertexOptions);
+			},
+		);
+	});
+
 	describe.skipIf(!process.env.XAI_API_KEY)("xAI Provider Empty Messages", () => {
 		const llm = getModel("xai", "grok-3");
 

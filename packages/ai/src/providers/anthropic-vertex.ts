@@ -9,6 +9,7 @@ import { calculateCost } from "../models.js";
 import type {
 	Api,
 	AssistantMessage,
+	CacheRetention,
 	Context,
 	Message,
 	Model,
@@ -28,16 +29,19 @@ import { convertContentBlocks, mapStopReason, mergeHeaders, normalizeToolCallId 
 import { adjustMaxTokensForThinking, buildBaseOptions } from "./simple-options.js";
 import { transformMessages } from "./transform-messages.js";
 
+export type AnthropicVertexEffort = "low" | "medium" | "high" | "max";
+
 export interface AnthropicVertexOptions extends StreamOptions {
 	thinkingEnabled?: boolean;
 	thinkingBudgetTokens?: number;
+	effort?: AnthropicVertexEffort;
 	interleavedThinking?: boolean;
 	toolChoice?: "auto" | "any" | "none" | { type: "tool"; name: string };
 	project?: string;
 	region?: string;
 }
 
-export const streamAnthropicVertex: StreamFunction<"anthropic-vertex"> = (
+export const streamAnthropicVertex: StreamFunction<"anthropic-vertex", AnthropicVertexOptions> = (
 	model: Model<"anthropic-vertex">,
 	context: Context,
 	options?: AnthropicVertexOptions,
@@ -106,7 +110,7 @@ export const streamAnthropicVertex: StreamFunction<"anthropic-vertex"> = (
 							type: "toolCall",
 							id: event.content_block.id,
 							name: event.content_block.name,
-							arguments: event.content_block.input as Record<string, any>,
+							arguments: (event.content_block.input as Record<string, any>) ?? {},
 							partialJson: "",
 							index: event.index,
 						};
@@ -200,11 +204,11 @@ export const streamAnthropicVertex: StreamFunction<"anthropic-vertex"> = (
 					if (event.usage.output_tokens != null) {
 						output.usage.output = event.usage.output_tokens;
 					}
-					if ((event.usage as any).cache_read_input_tokens !== undefined) {
-						output.usage.cacheRead = (event.usage as any).cache_read_input_tokens;
+					if (event.usage.cache_read_input_tokens != null) {
+						output.usage.cacheRead = event.usage.cache_read_input_tokens;
 					}
-					if ((event.usage as any).cache_creation_input_tokens !== undefined) {
-						output.usage.cacheWrite = (event.usage as any).cache_creation_input_tokens;
+					if (event.usage.cache_creation_input_tokens != null) {
+						output.usage.cacheWrite = event.usage.cache_creation_input_tokens;
 					}
 					output.usage.totalTokens =
 						output.usage.input + output.usage.output + output.usage.cacheRead + output.usage.cacheWrite;
@@ -233,6 +237,52 @@ export const streamAnthropicVertex: StreamFunction<"anthropic-vertex"> = (
 
 	return stream;
 };
+
+function resolveCacheRetention(cacheRetention?: CacheRetention): CacheRetention {
+	if (cacheRetention) {
+		return cacheRetention;
+	}
+	if (typeof process !== "undefined" && process.env.PI_CACHE_RETENTION === "long") {
+		return "long";
+	}
+	return "short";
+}
+
+function getCacheControl(
+	baseUrl: string,
+	cacheRetention?: CacheRetention,
+): { retention: CacheRetention; cacheControl?: { type: "ephemeral"; ttl?: "1h" } } {
+	const retention = resolveCacheRetention(cacheRetention);
+	if (retention === "none") {
+		return { retention };
+	}
+	const ttl = retention === "long" && baseUrl.includes("api.anthropic.com") ? "1h" : undefined;
+	return {
+		retention,
+		cacheControl: { type: "ephemeral", ...(ttl && { ttl }) },
+	};
+}
+
+function supportsAdaptiveThinking(modelId: string): boolean {
+	return modelId.includes("opus-4-6") || modelId.includes("opus-4.6");
+}
+
+function mapThinkingLevelToEffort(level: SimpleStreamOptions["reasoning"]): AnthropicVertexEffort {
+	switch (level) {
+		case "minimal":
+			return "low";
+		case "low":
+			return "low";
+		case "medium":
+			return "medium";
+		case "high":
+			return "high";
+		case "xhigh":
+			return "max";
+		default:
+			return "high";
+	}
+}
 
 function createClient(model: Model<"anthropic-vertex">, options?: AnthropicVertexOptions): AnthropicVertex {
 	const betaFeatures = ["fine-grained-tool-streaming-2025-05-14"];
@@ -270,22 +320,20 @@ function buildParams(
 	context: Context,
 	options?: AnthropicVertexOptions,
 ): MessageCreateParamsStreaming {
+	const { cacheControl } = getCacheControl(model.baseUrl, options?.cacheRetention);
 	const params: MessageCreateParamsStreaming = {
 		model: model.id,
-		messages: convertMessages(context.messages, model),
+		messages: convertMessages(context.messages, model, cacheControl),
 		max_tokens: options?.maxTokens || (model.maxTokens / 3) | 0,
 		stream: true,
 	};
 
 	if (context.systemPrompt) {
-		// Add cache control to system prompt
 		params.system = [
 			{
 				type: "text",
 				text: sanitizeSurrogates(context.systemPrompt),
-				cache_control: {
-					type: "ephemeral",
-				},
+				...(cacheControl ? { cache_control: cacheControl } : {}),
 			},
 		];
 	}
@@ -299,10 +347,17 @@ function buildParams(
 	}
 
 	if (options?.thinkingEnabled && model.reasoning) {
-		params.thinking = {
-			type: "enabled",
-			budget_tokens: options.thinkingBudgetTokens || 1024,
-		};
+		if (supportsAdaptiveThinking(model.id)) {
+			params.thinking = { type: "adaptive" };
+			if (options.effort) {
+				params.output_config = { effort: options.effort };
+			}
+		} else {
+			params.thinking = {
+				type: "enabled",
+				budget_tokens: options.thinkingBudgetTokens || 1024,
+			};
+		}
 	}
 
 	if (options?.toolChoice) {
@@ -316,7 +371,11 @@ function buildParams(
 	return params;
 }
 
-function convertMessages(messages: Message[], model: Model<"anthropic-vertex">): MessageParam[] {
+function convertMessages(
+	messages: Message[],
+	model: Model<"anthropic-vertex">,
+	cacheControl?: { type: "ephemeral"; ttl?: "1h" },
+): MessageParam[] {
 	const params: MessageParam[] = [];
 
 	// Transform messages for cross-provider compatibility
@@ -395,7 +454,7 @@ function convertMessages(messages: Message[], model: Model<"anthropic-vertex">):
 						type: "tool_use",
 						id: block.id,
 						name: block.name,
-						input: block.arguments,
+						input: block.arguments ?? {},
 					});
 				}
 			}
@@ -441,18 +500,19 @@ function convertMessages(messages: Message[], model: Model<"anthropic-vertex">):
 	}
 
 	// Add cache_control to the last user message to cache conversation history
-	if (params.length > 0) {
+	if (cacheControl && params.length > 0) {
 		const lastMessage = params[params.length - 1];
 		if (lastMessage.role === "user") {
-			// Add cache control to the last content block
 			if (Array.isArray(lastMessage.content)) {
 				const lastBlock = lastMessage.content[lastMessage.content.length - 1];
 				if (
 					lastBlock &&
 					(lastBlock.type === "text" || lastBlock.type === "image" || lastBlock.type === "tool_result")
 				) {
-					(lastBlock as any).cache_control = { type: "ephemeral" };
+					(lastBlock as { cache_control?: { type: "ephemeral"; ttl?: "1h" } }).cache_control = cacheControl;
 				}
+			} else if (typeof lastMessage.content === "string") {
+				lastMessage.content = [{ type: "text", text: lastMessage.content, cache_control: cacheControl }];
 			}
 		}
 	}
@@ -486,7 +546,19 @@ export const streamSimpleAnthropicVertex: StreamFunction<"anthropic-vertex", Sim
 	// Anthropic Vertex uses ADC, no API key needed
 	const base = buildBaseOptions(model, options, undefined);
 	if (!options?.reasoning) {
-		return streamAnthropicVertex(model, context, { ...base, thinkingEnabled: false } as AnthropicVertexOptions);
+		return streamAnthropicVertex(model, context, {
+			...base,
+			thinkingEnabled: false,
+		} satisfies AnthropicVertexOptions);
+	}
+
+	if (supportsAdaptiveThinking(model.id)) {
+		const effort = mapThinkingLevelToEffort(options.reasoning);
+		return streamAnthropicVertex(model, context, {
+			...base,
+			thinkingEnabled: true,
+			effort,
+		} satisfies AnthropicVertexOptions);
 	}
 
 	const adjusted = adjustMaxTokensForThinking(
@@ -501,5 +573,5 @@ export const streamSimpleAnthropicVertex: StreamFunction<"anthropic-vertex", Sim
 		maxTokens: adjusted.maxTokens,
 		thinkingEnabled: true,
 		thinkingBudgetTokens: adjusted.thinkingBudget,
-	} as AnthropicVertexOptions);
+	} satisfies AnthropicVertexOptions);
 };

@@ -279,6 +279,10 @@ ${chalk.bold("Environment Variables:")}
   AZURE_OPENAI_API_VERSION         - Azure OpenAI API version (default: v1)
   AZURE_OPENAI_DEPLOYMENT_NAME_MAP - Azure OpenAI model=deployment map (comma-separated)
   GEMINI_API_KEY                   - Google Gemini API key
+  GOOGLE_CLOUD_PROJECT             - GCP project ID for Vertex AI / Anthropic Vertex
+  GCLOUD_PROJECT                   - Alternative GCP project ID env var for Vertex AI / Anthropic Vertex
+  GOOGLE_CLOUD_LOCATION            - GCP region for Vertex AI / Anthropic Vertex
+  GOOGLE_APPLICATION_CREDENTIALS   - Service account JSON path for Vertex AI / Anthropic Vertex ADC
   GROQ_API_KEY                     - Groq API key
   CEREBRAS_API_KEY                 - Cerebras API key
   XAI_API_KEY                      - xAI Grok API key

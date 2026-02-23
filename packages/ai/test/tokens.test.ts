@@ -130,6 +130,21 @@ describe("Token Statistics on Abort", () => {
 		});
 	});
 
+	describe("Anthropic Vertex Provider", () => {
+		const project = process.env.GOOGLE_CLOUD_PROJECT || process.env.GCLOUD_PROJECT;
+		const region = process.env.GOOGLE_CLOUD_LOCATION || "us-east5";
+		const isAnthropicVertexConfigured = Boolean(project);
+		const llm = getModel("anthropic-vertex", "claude-sonnet-4-5@20250929");
+
+		it.skipIf(!isAnthropicVertexConfigured)(
+			"should include token stats when aborted mid-stream",
+			{ retry: 3, timeout: 30000 },
+			async () => {
+				await testTokensOnAbort(llm, { project, region });
+			},
+		);
+	});
+
 	describe.skipIf(!process.env.XAI_API_KEY)("xAI Provider", () => {
 		const llm = getModel("xai", "grok-3-fast");
 

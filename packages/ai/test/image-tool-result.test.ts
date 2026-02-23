@@ -276,6 +276,30 @@ describe("Tool Results with Images", () => {
 		});
 	});
 
+	describe("Anthropic Vertex Provider (claude-sonnet-4-5@20250929)", () => {
+		const project = process.env.GOOGLE_CLOUD_PROJECT || process.env.GCLOUD_PROJECT;
+		const region = process.env.GOOGLE_CLOUD_LOCATION || "us-east5";
+		const isAnthropicVertexConfigured = Boolean(project);
+		const model = getModel("anthropic-vertex", "claude-sonnet-4-5@20250929");
+		const anthropicVertexOptions = { project, region } as const;
+
+		it.skipIf(!isAnthropicVertexConfigured)(
+			"should handle tool result with only image",
+			{ retry: 3, timeout: 30000 },
+			async () => {
+				await handleToolWithImageResult(model, anthropicVertexOptions);
+			},
+		);
+
+		it.skipIf(!isAnthropicVertexConfigured)(
+			"should handle tool result with text and image",
+			{ retry: 3, timeout: 30000 },
+			async () => {
+				await handleToolWithTextAndImageResult(model, anthropicVertexOptions);
+			},
+		);
+	});
+
 	describe.skipIf(!process.env.OPENROUTER_API_KEY)("OpenRouter Provider (glm-4.5v)", () => {
 		const llm = getModel("openrouter", "z-ai/glm-4.5v");
 

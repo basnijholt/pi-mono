@@ -169,6 +169,26 @@ describe("AI Providers Abort Tests", () => {
 		});
 	});
 
+	describe("Anthropic Vertex Provider Abort", () => {
+		const project = process.env.GOOGLE_CLOUD_PROJECT || process.env.GCLOUD_PROJECT;
+		const region = process.env.GOOGLE_CLOUD_LOCATION || "us-east5";
+		const isAnthropicVertexConfigured = Boolean(project);
+		const llm = getModel("anthropic-vertex", "claude-sonnet-4-5@20250929");
+		const anthropicVertexOptions = { project, region } as const;
+
+		it.skipIf(!isAnthropicVertexConfigured)("should abort mid-stream", { retry: 3 }, async () => {
+			await testAbortSignal(llm, anthropicVertexOptions);
+		});
+
+		it.skipIf(!isAnthropicVertexConfigured)("should handle immediate abort", { retry: 3 }, async () => {
+			await testImmediateAbort(llm, anthropicVertexOptions);
+		});
+
+		it.skipIf(!isAnthropicVertexConfigured)("should handle abort then new message", { retry: 3 }, async () => {
+			await testAbortThenNewMessage(llm, anthropicVertexOptions);
+		});
+	});
+
 	describe.skipIf(!process.env.MISTRAL_API_KEY)("Mistral Provider Abort", () => {
 		const llm = getModel("mistral", "devstral-medium-latest");
 

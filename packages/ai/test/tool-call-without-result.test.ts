@@ -144,6 +144,21 @@ describe("Tool Call Without Result Tests", () => {
 		});
 	});
 
+	describe("Anthropic Vertex Provider", () => {
+		const project = process.env.GOOGLE_CLOUD_PROJECT || process.env.GCLOUD_PROJECT;
+		const region = process.env.GOOGLE_CLOUD_LOCATION || "us-east5";
+		const isAnthropicVertexConfigured = Boolean(project);
+		const model = getModel("anthropic-vertex", "claude-sonnet-4-5@20250929");
+
+		it.skipIf(!isAnthropicVertexConfigured)(
+			"should filter out tool calls without corresponding tool results",
+			{ retry: 3, timeout: 30000 },
+			async () => {
+				await testToolCallWithoutResult(model, { project, region });
+			},
+		);
+	});
+
 	describe.skipIf(!process.env.XAI_API_KEY)("xAI Provider", () => {
 		const model = getModel("xai", "grok-3-fast");
 

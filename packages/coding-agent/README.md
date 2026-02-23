@@ -91,8 +91,9 @@ For each built-in provider, pi maintains a list of tool-capable models, updated 
 - Google Gemini CLI
 - Google Antigravity
 
-**API keys:**
+**API keys / ADC:**
 - Anthropic
+- Anthropic Vertex (Google Vertex AI with ADC)
 - OpenAI
 - Azure OpenAI
 - Google Gemini
@@ -553,6 +554,9 @@ pi --thinking high "Solve this complex problem"
 | `PI_PACKAGE_DIR` | Override package directory (useful for Nix/Guix where store paths tokenize poorly) |
 | `PI_SKIP_VERSION_CHECK` | Skip version check at startup |
 | `PI_CACHE_RETENTION` | Set to `long` for extended prompt cache (Anthropic: 1h, OpenAI: 24h) |
+| `GOOGLE_CLOUD_PROJECT`, `GCLOUD_PROJECT` | GCP project ID for Vertex AI / Anthropic Vertex |
+| `GOOGLE_CLOUD_LOCATION` | GCP region for Vertex AI / Anthropic Vertex |
+| `GOOGLE_APPLICATION_CREDENTIALS` | Service account JSON path for Vertex AI / Anthropic Vertex ADC |
 | `VISUAL`, `EDITOR` | External editor for Ctrl+G |
 
 ---
