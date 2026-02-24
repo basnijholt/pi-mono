@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { getEnvApiKey } from "../src/env-api-keys.js";
 import { getModel } from "../src/models.js";
 import { stream } from "../src/stream.js";
 import type { Context, Model } from "../src/types.js";
@@ -15,24 +16,32 @@ function makeContext(): Context {
 	};
 }
 
+const hasAnthropicVertexCredentials = !!getEnvApiKey("anthropic-vertex");
+
+type StreamModel = Parameters<typeof stream>[0];
+
+async function assertXhighSuccess(model: StreamModel): Promise<void> {
+	const s = stream(model, makeContext(), { reasoningEffort: "xhigh" });
+	let hasThinking = false;
+
+	for await (const event of s) {
+		if (event.type === "thinking_start" || event.type === "thinking_delta") {
+			hasThinking = true;
+		}
+	}
+
+	const response = await s.result();
+	expect(response.stopReason, `Error: ${response.errorMessage}`).toBe("stop");
+	expect(response.content.some((b) => b.type === "text")).toBe(true);
+	expect(hasThinking || response.content.some((b) => b.type === "thinking")).toBe(true);
+}
+
 describe.skipIf(!process.env.OPENAI_API_KEY)("xhigh reasoning", () => {
 	describe("codex-max (supports xhigh)", () => {
 		// Note: codex models only support the responses API, not chat completions
 		it("should work with openai-responses", async () => {
 			const model = getModel("openai", "gpt-5.1-codex-max");
-			const s = stream(model, makeContext(), { reasoningEffort: "xhigh" });
-			let hasThinking = false;
-
-			for await (const event of s) {
-				if (event.type === "thinking_start" || event.type === "thinking_delta") {
-					hasThinking = true;
-				}
-			}
-
-			const response = await s.result();
-			expect(response.stopReason, `Error: ${response.errorMessage}`).toBe("stop");
-			expect(response.content.some((b) => b.type === "text")).toBe(true);
-			expect(hasThinking || response.content.some((b) => b.type === "thinking")).toBe(true);
+			await assertXhighSuccess(model);
 		});
 	});
 
@@ -67,5 +76,12 @@ describe.skipIf(!process.env.OPENAI_API_KEY)("xhigh reasoning", () => {
 			expect(response.stopReason).toBe("error");
 			expect(response.errorMessage).toContain("xhigh");
 		});
+	});
+});
+
+describe.skipIf(!hasAnthropicVertexCredentials)("anthropic-vertex xhigh reasoning", () => {
+	it("should work on Claude Opus 4.6", async () => {
+		const model = getModel("anthropic-vertex", "claude-opus-4-6@default");
+		await assertXhighSuccess(model);
 	});
 });

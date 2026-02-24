@@ -432,7 +432,7 @@ export async function processAnthropicStreamEvents<TApi extends Api>(
 					name: options.mapIncomingToolName
 						? options.mapIncomingToolName(event.content_block.name)
 						: event.content_block.name,
-					arguments: (event.content_block.input as Record<string, any>) ?? {},
+					arguments: (event.content_block.input as Record<string, unknown>) ?? {},
 					partialJson: "",
 					index: event.index,
 				};
